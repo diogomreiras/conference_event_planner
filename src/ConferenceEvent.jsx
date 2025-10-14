@@ -5,18 +5,20 @@ import { useSelector, useDispatch } from "react-redux";
 import { incrementQuantity, decrementQuantity } from "./venueSlice";
 import { incrementAvQuantity, decrementAvQuantity } from "./avSlice";
 import { toggleMealSelection } from "./mealsSlice";
+import { formatCost, formatNumber } from "./helpers";
 
 const ConferenceEvent = () => {
   const [showItems, setShowItems] = useState(false);
   const [numberOfPeople, setNumberOfPeople] = useState(1);
 
+  const dispatch = useDispatch();
   const venueItems = useSelector((state) => state.venue);
   const avItems = useSelector((state) => state.av);
   const mealsItems = useSelector((state) => state.meals);
-  const dispatch = useDispatch();
 
-  const remainingAuditoriumQuantity = 3 - venueItems.find(item => item.name === "Auditorium Hall (Capacity:200)").quantity;
 
+
+  const auditoriumQuantity = () => venueItems.find(item => item.name === "Auditorium Hall (Capacity:200)").quantity || 0;
 
   const handleToggleItems = () => {
     console.log("handleToggleItems called");
@@ -35,6 +37,7 @@ const ConferenceEvent = () => {
       dispatch(decrementQuantity(index));
     }
   };
+
   const handleIncrementAvQuantity = (index) => {
     dispatch(incrementAvQuantity(index));
   };
@@ -82,10 +85,7 @@ const ConferenceEvent = () => {
     return items;
   };
 
-  const items = getItemsFromTotalCost();
-
   const ItemsDisplay = ({ items }) => {
-    console.log(items);
     return <>
       <div className="display_box1">
         {items.length === 0 && <p>No items selected</p>}
@@ -102,15 +102,15 @@ const ConferenceEvent = () => {
             {items.map((item, index) => (
               <tr key={index}>
                 <td>{item.name}</td>
-                <td>${item.cost}</td>
+                <td>{formatCost(item.cost)}</td>
                 <td>
                   {item.type === "meals" || item.numberOfPeople
-                    ? ` For ${numberOfPeople} people`
+                    ? ` For ${formatNumber(numberOfPeople)} people`
                     : item.quantity}
                 </td>
                 <td>{item.type === "meals" || item.numberOfPeople
-                  ? `${item.cost * numberOfPeople}`
-                  : `${item.cost * item.quantity}`}
+                  ? formatCost(item.cost * numberOfPeople)
+                  : formatCost(item.cost * item.quantity)}
                 </td>
               </tr>
             ))}
@@ -140,6 +140,18 @@ const ConferenceEvent = () => {
     return totalCost;
   };
 
+  const navigateToProducts = (idType) => {
+    if (idType == '#venue' || idType == '#addons' || idType == '#meals') {
+      if (showItems) { // Check if showItems is false
+        setShowItems(!showItems); // Toggle showItems to true only if it's currently false
+      }
+    }
+  }
+
+
+
+  let items = getItemsFromTotalCost();
+
   const venueTotalCost = calculateTotalCost("venue");
   const avTotalCost = calculateTotalCost("av");
   const mealsTotalCost = calculateTotalCost("meals");
@@ -149,13 +161,6 @@ const ConferenceEvent = () => {
     meals: mealsTotalCost,
   };
 
-  const navigateToProducts = (idType) => {
-    if (idType == '#venue' || idType == '#addons' || idType == '#meals') {
-      if (showItems) { // Check if showItems is false
-        setShowItems(!showItems); // Toggle showItems to true only if it's currently false
-      }
-    }
-  }
 
   return (
     <>
@@ -177,9 +182,10 @@ const ConferenceEvent = () => {
           ?
           (
             <div className="items-information">
+
+              {/*Necessary rooms*/}
               <div id="venue" className="venue_container container_main">
                 <div className="text">
-
                   <h1>Venue Room Selection</h1>
                 </div>
                 <div className="venue_selection">
@@ -189,10 +195,9 @@ const ConferenceEvent = () => {
                         <img src={item.img} alt={item.name} />
                       </div>
                       <div className="text">{item.name}</div>
-                      <div>${item.cost}</div>
+                      <div>{formatCost(item.cost)}</div>
                       <div className="button_container">
                         {venueItems[index].name === "Auditorium Hall (Capacity:200)" ? (
-
                           <>
                             <button
                               className={venueItems[index].quantity === 0 ? "btn-warning btn-disabled" : "btn-minus btn-warning"}
@@ -201,10 +206,10 @@ const ConferenceEvent = () => {
                               &#8211;
                             </button>
                             <span className="selected_count">
-                              {venueItems[index].quantity > 0 ? ` ${venueItems[index].quantity}` : "0"}
+                              {`${venueItems[index].quantity || 0}`}
                             </span>
                             <button
-                              className={remainingAuditoriumQuantity === 0 ? "btn-success btn-disabled" : "btn-success btn-plus"}
+                              className={auditoriumQuantity() >= 3 ? "btn-success btn-disabled" : "btn-success btn-plus"}
                               onClick={() => handleAddToCart(index)}
                             >
                               &#43;
@@ -213,37 +218,32 @@ const ConferenceEvent = () => {
                         ) : (
                           <div className="button_container">
                             <button
-                              className={venueItems[index].quantity === 0 ? " btn-warning btn-disabled" : "btn-warning btn-plus"}
-                              onClick={() => handleRemoveFromCart(index)}
+                              className={venueItems[index].quantity <= 0 ? " btn-warning btn-disabled" : "btn-warning btn-plus"}
+                              onClick={() => handleRemoveFromCart(index)} disabled={venueItems[index].quantity <= 0}
                             >
                               &#8211;
                             </button>
                             <span className="selected_count">
-                              {venueItems[index].quantity > 0 ? ` ${venueItems[index].quantity}` : "0"}
+                              {`${venueItems[index].quantity || 0}`}
                             </span>
                             <button
-                              className={venueItems[index].quantity === 10 ? " btn-success btn-disabled" : "btn-success btn-plus"}
-                              onClick={() => handleAddToCart(index)}
+                              className={venueItems[index].quantity >= 10 ? " btn-success btn-disabled" : "btn-success btn-plus"}
+                              onClick={() => handleAddToCart(index)} disabled={venueItems[index].quantity >= 10}
                             >
                               &#43;
                             </button>
-
-
                           </div>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
-                <div className="total_cost">Total Cost: ${venueTotalCost}</div>
+                <div className="total_cost">Total Cost: {formatCost(venueTotalCost)}</div>
               </div>
 
               {/*Necessary Add-ons*/}
               <div id="addons" className="venue_container container_main">
-
-
                 <div className="text">
-
                   <h1> Add-ons Selection</h1>
                 </div>
                 <div className="addons_selection">
@@ -253,7 +253,7 @@ const ConferenceEvent = () => {
                         <img src={item.img} alt={item.name} />
                       </div>
                       <div className="text"> {item.name} </div>
-                      <div> ${item.cost} </div>
+                      <div> {formatCost(item.cost)} </div>
                       <div className="addons_btn">
                         <button className="btn-warning" onClick={() => handleDecrementAvQuantity(index)}> &ndash; </button>
                         <span className="quantity-value">{item.quantity}</span>
@@ -262,27 +262,21 @@ const ConferenceEvent = () => {
                     </div>
                   ))}
                 </div>
-                <div className="total_cost">Total Cost: ${avTotalCost}</div>
+                <div className="total_cost">Total Cost: {formatCost(avTotalCost)}</div>
               </div>
 
               {/* Meal Section */}
-
               <div id="meals" className="venue_container container_main">
-
                 <div className="text">
-
                   <h1>Meals Selection</h1>
                 </div>
-
                 <div className="input-container venue_selection">
-                  <div className="input-container venue_selection">
-                    <label htmlFor="numberOfPeople"><h3>Number of People:</h3></label>
-                    <input
-                      type="number" className="input_box5" id="numberOfPeople" value={numberOfPeople}
-                      onChange={(e) => setNumberOfPeople(parseInt(e.target.value))}
-                      min="1"
-                    />
-                  </div>
+                  <label htmlFor="numberOfPeople"><h3>Number of People:</h3></label>
+                  <input
+                    type="number" className="input_box5" id="numberOfPeople" value={numberOfPeople}
+                    onChange={(e) => setNumberOfPeople(parseInt(e.target.value))}
+                    min="1"
+                  />
                 </div>
                 <div className="meal_selection">
                   {mealsItems.map((item, index) => (
@@ -294,13 +288,27 @@ const ConferenceEvent = () => {
                         />
                         <label htmlFor={`meal_${index}`}> {item.name} </label>
                       </div>
-                      <div className="meal_cost">${item.cost}</div>
+                      <div className="meal_cost">{formatCost(item.cost)}</div>
                     </div>
                   ))}
                 </div>
-                <div className="total_cost">Total Cost: ${mealsTotalCost}</div>
-
+                <div className="total_cost">Total Cost: {formatCost(mealsTotalCost)}</div>
               </div>
+
+              {/*Total costs summary*/}
+              <div id="summary" className="venue_container container_main">
+                <div className="text">
+                  <h1>Summary of Total Costs</h1>
+                </div>
+                <div className="text">Venue Total: {formatCost(venueTotalCost)}</div>
+                <div className="text">AV Total: {formatCost(avTotalCost)}</div>
+                <div className="text">Meals Total: {formatCost(mealsTotalCost)}</div>
+                <div className="total_cost">Final price: {formatCost(totalCosts.venue + totalCosts.av + totalCosts.meals)}</div>
+                <button className="details_button" onClick={() => setShowItems(!showItems)}>
+                  Show Details
+                </button>
+              </div>
+
             </div>
           ) : (
             <div className="total_amount_detail">
@@ -308,10 +316,6 @@ const ConferenceEvent = () => {
             </div>
           )
         }
-
-
-
-
       </div>
     </>
 
