@@ -165,7 +165,7 @@ const ConferenceEvent = () => {
   return (
     <>
       <nav className="nav_event_conference">
-        <div className="company_logo">Conference Expense Planner</div>
+        <a href="./" className="company_logo"> Conference Expense Planner </a>
         <div className="left_nav">
           <div className="nav_links">
             <a href="#venue" onClick={() => navigateToProducts("#venue")} >Venue</a>
